@@ -1,36 +1,27 @@
-const qrcode = require('qrcode-terminal');
-const { Client, LocalAuth, MessageMedia } = require('whatsapp-web.js');
-const fs = require('fs');
+const express = require('express');
+const app = express();
+const port = process.env.PORT || 3000;
 
-const client = new Client({
-    authStrategy: new LocalAuth()
+app.use(express.json());
+
+// Endpoint para enviar mensagens
+app.post('/send-message', async (req, res) => {
+    const { number, message } = req.body;
+
+    if (!number || !message) {
+        return res.status(400).send({ error: 'Número e mensagem são obrigatórios!' });
+    }
+
+    const chatId = `${number}@c.us`;
+    try {
+        await client.sendMessage(chatId, message);
+        res.send({ success: `Mensagem enviada para ${number}` });
+    } catch (err) {
+        res.status(500).send({ error: `Erro ao enviar mensagem: ${err.message}` });
+    }
 });
 
-client.on('ready', () => {
-    console.log('Bot pronto para uso!');
-
-    // Lista de números para enviar a mensagem (formato internacional, sem "+" e sem espaços)
-    const numbers = [''];
-
-    // Caminho para a imagem que será enviada
-    const imagePath = './images.png';
-
-    // Mensagem padrão
-    const messageText = 'Oi! Teste do bot.';
-
-    // Lê a imagem e envia para cada número
-    const media = MessageMedia.fromFilePath(imagePath);
-    numbers.forEach(number => {
-        const chatId = `${number}@c.us`; // Formato do ID do chat
-        client.sendMessage(chatId, media, { caption: messageText })
-            .then(() => console.log(`Mensagem enviada para ${number}`))
-            .catch(err => console.error(`Erro ao enviar para ${number}:`, err));
-    });
+// Inicializa o servidor
+app.listen(port, () => {
+    console.log(`Servidor rodando na porta ${port}`);
 });
-
-// Gera o QR Code para autenticação
-client.on('qr', qr => {
-    qrcode.generate(qr, { small: true });
-});
-
-client.initialize();
